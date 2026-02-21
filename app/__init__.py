@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
 from app.config import Config
+from app.routes.auth import auth_bp
 
 db = SQLAlchemy()
 jwt = JWTManager()
@@ -19,6 +20,9 @@ def create_app():
     jwt.init_app(app)
     migrate.init_app(app, db)
     ma.init_app(app)
+
+    # Register blueprints
+    app.register_blueprint(auth_bp)
 
     # Import models so Flask-Migrate can detect them
     from app.models import User, SavedItem, SearchedItem
