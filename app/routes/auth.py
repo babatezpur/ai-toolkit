@@ -24,7 +24,7 @@ def register():
         return jsonify({'error': 'Username already taken'}), 409
 
     #3 Create new user with hashed password
-    new_user = User(email=data['email'], username=data['username'], password_hash=generate_password_hash(data['password']))
+    new_user = User(email=data['email'], username=data['username'], password_hash=generate_password_hash(data['password'], method='pbkdf2:sha256'))
     db.session.add(new_user)
     db.session.commit()
 
