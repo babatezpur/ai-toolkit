@@ -26,5 +26,9 @@ def create_app():
     # Register blueprints (import here to avoid circular imports)
     from app.routes.auth import auth_bp
     app.register_blueprint(auth_bp)
+    from app.routes.facts import facts_bp
+    app.register_blueprint(facts_bp)
+    from app.routes.quotes import quotes_bp
+    app.register_blueprint(quotes_bp)
 
     return app
