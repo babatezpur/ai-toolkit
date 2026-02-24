@@ -1,5 +1,4 @@
-from datetime import date
-import datetime
+from datetime import date, datetime, timezone
 from app import db
 from app.models.user import User
 
@@ -20,13 +19,13 @@ def check_rate_limit(user: User):
     today = date.today()
 
     # New day — reset the counter
-    if user.last_request_at != today:
+    if user.last_request_date != today:
         user.daily_request_count = 0
-        user.last_request_at = datetime.utcnow()
+        user.last_request_date = date.today()
         db.session.commit()
 
     remaining = DAILY_LIMIT - user.daily_request_count
-    return remaining > 0
+    return remaining, remaining > 0
 
 
 def increment_request_count(user: User):
