@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, app
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
@@ -30,5 +30,7 @@ def create_app():
     app.register_blueprint(facts_bp)
     from app.routes.quotes import quotes_bp
     app.register_blueprint(quotes_bp)
+    from app.routes.conversation import conversation_bp
+    app.register_blueprint(conversation_bp)
 
     return app
