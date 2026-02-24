@@ -21,7 +21,7 @@ class LoginSchema(ma.Schema):
 class UserResponseSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = User
-        exclude = ('password_hash', 'daily_request_count', 'last_request_at')
+        exclude = ('password_hash', 'daily_request_count', 'last_request_date')
 
 
 register_schema = RegisterSchema()
