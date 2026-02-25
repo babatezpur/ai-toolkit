@@ -2,6 +2,8 @@ import json
 from openai import OpenAI
 from flask import current_app
 
+from app.errors.exceptions import OpenAIError
+
 
 def get_client():
     """Create OpenAI client using API key from config."""
@@ -39,9 +41,9 @@ def call_openai(system_prompt, user_prompt):
         return result
 
     except json.JSONDecodeError:
-        raise Exception("OpenAI returned invalid JSON")
+        raise OpenAIError("OpenAI returned invalid JSON")
     except Exception as e:
-        raise Exception(f"OpenAI API error: {str(e)}")
+        raise OpenAIError(str(e))
 
 
 def call_openai_conversation(messages):
@@ -70,4 +72,4 @@ def call_openai_conversation(messages):
         return response.choices[0].message.content
 
     except Exception as e:
-        raise Exception(f"OpenAI API error: {str(e)}")
+        raise OpenAIError(str(e))

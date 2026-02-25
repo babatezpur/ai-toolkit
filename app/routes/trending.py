@@ -1,12 +1,9 @@
-
-
-
-
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func
 from app import db
 from app.middlewares.auth import auth_required
 from app.models.searched_item import SearchedItem
+from app.errors.exceptions import BadRequestError
 
 
 trending_bp = Blueprint('trending', __name__, url_prefix='/trending')
@@ -26,7 +23,7 @@ def get_trending(current_user):
 
     if feature:
         if feature not in ['facts', 'quotes']:
-            return jsonify({'error': 'Feature must be "facts" or "quotes"'}), 400
+            raise BadRequestError('Feature must be "facts" or "quotes"')
         query = query.filter(SearchedItem.feature == feature)
 
     trending = query.group_by(SearchedItem.topic).order_by(func.count(SearchedItem.topic).desc()).limit(10).all()

@@ -32,5 +32,7 @@ def create_app():
     app.register_blueprint(quotes_bp)
     from app.routes.conversation import conversation_bp
     app.register_blueprint(conversation_bp)
+    from app.routes.trending import trending_bp
+    app.register_blueprint(trending_bp)
 
     return app

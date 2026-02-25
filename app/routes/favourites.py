@@ -1,12 +1,19 @@
 
 from flask import Blueprint, request, jsonify
-from marshmallow import ValidationError
 from app import db
 from app.middlewares.auth import auth_required
 from app.schemas.saved_item_schema import (
-    save_item_schema, saved_item_response_schema, saved_items_response_schema
+    save_item_schema,
+    saved_item_response_schema,
+    saved_items_response_schema,
 )
 from app.models.saved_item import SavedItem
+from app.errors.exceptions import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+)
 
 favourites_bp = Blueprint('favourites', __name__, url_prefix='/favourites')
 
@@ -14,14 +21,13 @@ favourites_bp = Blueprint('favourites', __name__, url_prefix='/favourites')
 @auth_required
 def add_favourite(current_user):
     # 1. Validate request body
-    try:
-        data = save_item_schema.load(request.get_json())
-    except ValidationError as e:
-        return jsonify({'error': e.messages}), 400
+    data = save_item_schema.load(request.get_json())
 
     # 2. Check if item already exists
-    if SavedItem.query.filter_by(user_id=current_user.id, topic=data['topic']).first():
-        return jsonify({'error': 'Item already saved'}), 409
+    if SavedItem.query.filter_by(
+        user_id=current_user.id, topic=data['topic']
+    ).first():
+        raise ConflictError('Item already saved')
 
     # 3. Create new favourite
     favourite = SavedItem(
@@ -50,7 +56,7 @@ def get_favourites(current_user):
 
     if category:
         if category not in ['fact', 'quote']:
-            return jsonify({'error': 'Category must be "fact" or "quote"'}), 400
+            raise BadRequestError('Category must be "fact" or "quote"')
         query = query.filter_by(category=category)
 
     items = query.order_by(SavedItem.created_at.desc()).all()
@@ -68,11 +74,11 @@ def delete_favourite(current_user, item_id):
     item = SavedItem.query.get(item_id)
 
     if not item:
-        return jsonify({'error': 'Favourite not found'}), 404
+        raise NotFoundError('Favourite not found')
 
     # 2. Verify ownership
     if item.user_id != current_user.id:
-        return jsonify({'error': 'Not your favourite'}), 403
+        raise ForbiddenError('Not your favourite')
 
     # 3. Delete
     db.session.delete(item)
