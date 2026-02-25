@@ -1,16 +1,28 @@
 from flask import Blueprint, request, jsonify
-from marshmallow import ValidationError
 from app import db
 from app.middlewares.auth import auth_required
 from app.schemas.conversation_schema import (
-    start_conversation_schema, send_message_schema,
-    conversation_list_schema, conversation_detail_schema
+    start_conversation_schema,
+    send_message_schema,
+    conversation_list_schema,
+    conversation_detail_schema,
 )
 from app.services.openai_services import call_openai_conversation
-from app.services.rate_limiter import check_rate_limit, increment_request_count, DAILY_LIMIT
+from app.services.rate_limiter import (
+    check_rate_limit,
+    increment_request_count,
+    DAILY_LIMIT,
+)
 from app.prompts.qa_prompt import QA_SYSTEM_PROMPT
 from app.models.conversation import Conversation
 from app.models.conversation_message import ConversationMessage
+from app.errors.exceptions import (
+    BadRequestError,
+    ForbiddenError,
+    NotFoundError,
+    RateLimitError,
+    OpenAIError,
+)
 
 conversation_bp = Blueprint('conversation', __name__, url_prefix='/conversation')
 
@@ -21,18 +33,12 @@ MAX_MESSAGES_PER_CONVERSATION = 5
 @auth_required
 def start_conversation(current_user):
     # 1. Validate request
-    try:
-        data = start_conversation_schema.load(request.get_json())
-    except ValidationError as e:
-        return jsonify({'error': e.messages}), 400
+    data = start_conversation_schema.load(request.get_json())
 
     # 2. Check rate limit
     allowed, remaining = check_rate_limit(current_user)
     if not allowed:
-        return jsonify({
-            'error': 'Daily request limit reached',
-            'daily_limit': DAILY_LIMIT
-        }), 429
+        raise RateLimitError('Daily request limit reached')
 
     # 3. Create conversation
     title = data['message'][:100]
@@ -58,7 +64,8 @@ def start_conversation(current_user):
     try:
         reply = call_openai_conversation(messages)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Wrap OpenAI / network errors in a consistent app error
+        raise OpenAIError(str(e))
 
     # 6. Save assistant reply
     assistant_msg = ConversationMessage(
@@ -83,18 +90,15 @@ def start_conversation(current_user):
 @auth_required
 def send_message(current_user):
     # 1. Validate request
-    try:
-        data = send_message_schema.load(request.get_json())
-    except ValidationError as e:
-        return jsonify({'error': e.messages}), 400
+    data = send_message_schema.load(request.get_json())
 
     # 2. Find conversation and verify ownership
     conversation = Conversation.query.get(data['conversation_id'])
     if not conversation:
-        return jsonify({'error': 'Conversation not found'}), 404
+        raise NotFoundError('Conversation not found')
 
     if conversation.user_id != current_user.id:
-        return jsonify({'error': 'Not your conversation'}), 403
+        raise ForbiddenError('Not your conversation')
 
     # 3. Check message limit (count only user messages)
     user_message_count = ConversationMessage.query.filter_by(
@@ -103,18 +107,12 @@ def send_message(current_user):
     ).count()
 
     if user_message_count >= MAX_MESSAGES_PER_CONVERSATION:
-        return jsonify({
-            'error': 'Conversation message limit reached',
-            'limit': MAX_MESSAGES_PER_CONVERSATION
-        }), 400
+        raise BadRequestError('Conversation message limit reached')
 
     # 4. Check rate limit
     allowed, remaining = check_rate_limit(current_user)
     if not allowed:
-        return jsonify({
-            'error': 'Daily request limit reached',
-            'daily_limit': DAILY_LIMIT
-        }), 429
+        raise RateLimitError('Daily request limit reached')
 
     # 5. Save user message
     user_msg = ConversationMessage(
@@ -133,7 +131,7 @@ def send_message(current_user):
     try:
         reply = call_openai_conversation(messages)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        raise OpenAIError(str(e))
 
     # 7. Save assistant reply
     assistant_msg = ConversationMessage(
@@ -172,10 +170,10 @@ def get_conversation(current_user, conversation_id):
     conversation = Conversation.query.get(conversation_id)
 
     if not conversation:
-        return jsonify({'error': 'Conversation not found'}), 404
+        raise NotFoundError('Conversation not found')
 
     if conversation.user_id != current_user.id:
-        return jsonify({'error': 'Not your conversation'}), 403
+        raise ForbiddenError('Not your conversation')
 
     return jsonify({
         'conversation': conversation_detail_schema.dump(conversation)
