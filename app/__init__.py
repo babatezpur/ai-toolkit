@@ -34,5 +34,10 @@ def create_app():
     app.register_blueprint(conversation_bp)
     from app.routes.trending import trending_bp
     app.register_blueprint(trending_bp)
+    from app.routes.favourites import favourites_bp
+    app.register_blueprint(favourites_bp)
+
+    from app.errors.handlers import register_error_handlers
+    register_error_handlers(app)
 
     return app
