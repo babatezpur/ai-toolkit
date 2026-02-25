@@ -1,6 +1,7 @@
 
 
 from flask import jsonify
+from marshmallow import ValidationError
 
 from app.errors.exceptions import AppError
 
@@ -31,6 +32,14 @@ def register_error_handlers(app):
             'error': 'Method not allowed',
             'status': 405
         }), 405
+
+    
+    @app.errorhandler(ValidationError)
+    def handle_validation_error(error):
+        return jsonify({
+            'error': error.messages,
+            'status': 400
+        }), 400
 
     # Catch everything else (unexpected crashes)
     @app.errorhandler(500)
