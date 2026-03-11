@@ -25,7 +25,7 @@ def add_favourite(current_user):
 
     # 2. Check if item already exists
     if SavedItem.query.filter_by(
-        user_id=current_user.id, topic=data['topic']
+        user_id=current_user.id, content=data['content']
     ).first():
         raise ConflictError('Item already saved')
 
