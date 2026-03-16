@@ -28,6 +28,11 @@ class ConversationListSchema(ma.SQLAlchemyAutoSchema):
         model = Conversation
         exclude = ('user_id',)
 
+    message_count = fields.Method('get_message_count')
+
+    def get_message_count(self, obj):
+        return len(obj.messages)
+
 
 # For formatting a full conversation with all messages
 class ConversationDetailSchema(ma.SQLAlchemyAutoSchema):
