@@ -31,7 +31,7 @@ class ConversationListSchema(ma.SQLAlchemyAutoSchema):
     message_count = fields.Method('get_message_count')
 
     def get_message_count(self, obj):
-        return len(obj.messages)
+        return sum(1 for m in obj.messages if m.role == 'user')
 
 
 # For formatting a full conversation with all messages
